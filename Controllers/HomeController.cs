@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using GMeet.Helpers;
@@ -22,12 +23,28 @@ namespace GMeet.Controllers
         [Route("favicon.ico")]
         public IActionResult Favicon() => NotFound();
 
+        [AcceptVerbs("GET")]
+        [Route("set-authuser")]
+        public IActionResult SetAuthUser()
+        {
+            return View();
+        }
+
+        [AcceptVerbs("POST")]
+        [Route("set-authuser")]
+        [ValidateAntiForgeryToken]
+        public IActionResult SetAuthUserSave(string authuser)
+        {
+            Response.Cookies.Append("authuser", authuser, new Microsoft.AspNetCore.Http.CookieOptions() { Expires = DateTime.UtcNow.AddYears(10) });
+            return Content("Done! From now on, you will be redirected using authuser=" + authuser);
+        }
+
         [Route("{*meetingName}", Order = 1000)]
         public async Task<IActionResult> GoToMeet(string meetingName)
         {
             if (string.IsNullOrWhiteSpace(meetingName))
             {
-                return Content("Specify a meeting name");
+                return View("Index");
             }
 
             var meetResult = await _calendarHelper.GetMeetLinkAsync(meetingName);
@@ -37,6 +54,10 @@ namespace GMeet.Controllers
                     var url = meetResult.Url;
                     url += url.IndexOf('?') >= 0 ? '&' : '?';
                     url += "gmeet=" + HttpUtility.UrlEncode(meetingName);
+                    if (Request.Cookies.TryGetValue("authuser", out var authuser))
+                    {
+                        url += "&authuser=" + authuser;
+                    }
                     return Redirect(url);
                 case GetMeetLinkResponse.Status.Pending:
                     return Content("A Google Meet is being provisioned... please refresh the page");

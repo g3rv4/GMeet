@@ -1,0 +1,8 @@
+<html>
+    <h2>Specify the authuser parameter to use when redirecting you to Google Meet. That lets you select the Google account you want to use.</h1>
+    <form method="post">
+        @Html.AntiForgeryToken()
+        <input type="text" name="authuser" />
+        <button type="submit">Submit</button>
+    </form>
+</html>
