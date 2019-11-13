@@ -131,7 +131,7 @@ namespace GMeet.Helpers
                         }
                     }
                 };
-                json = JSON.Serialize(request, Options.ISO8601CamelCase);
+                json = JSON.Serialize(request, Options.ISO8601ExcludeNullsCamelCase);
                 var content = new StringContent(json);
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
