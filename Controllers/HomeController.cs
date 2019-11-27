@@ -48,10 +48,15 @@ namespace GMeet.Controllers
             }
 
             var meetResult = await _calendarHelper.GetMeetLinkAsync(meetingName);
-            if (meetResult.Result == GetMeetLinkResponse.Status.FailureProvisioningMeet)
+            if (meetResult.Result == GetMeetLinkResponse.Status.FailureProvisioningMeet ||
+                meetResult.Result == GetMeetLinkResponse.Status.Pending)
             {
                 // if two users click on a link to a new room at the same time, one of them is going to provision it
-                // and the other one will fail to provision. When that happens, give it 500ms and then try again.
+                // and the other one will fail to provision.
+                //
+                // Also, some times a meet room takes a bit of time to be provisioned.
+                //
+                // When those things that happen, give it 500ms and then try again.
                 await Task.Delay(500);
                 meetResult = await _calendarHelper.GetMeetLinkAsync(meetingName);
             }
