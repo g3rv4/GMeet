@@ -24,6 +24,7 @@ namespace GMeet.Helpers
         private string ClientId { get; set; }
         private string ClientSecret { get; set; }
         private string CalendarId { get; set; }
+        private string Domain { get; set; }
 
         private static readonly ConcurrentDictionary<string, GetMeetLinkResponse> MeetLinks = new ConcurrentDictionary<string, GetMeetLinkResponse>();
         private static string _accessToken { get; set; }
@@ -114,7 +115,7 @@ namespace GMeet.Helpers
                 {
                     Id = eventId,
                     Summary = meetName,
-                    Description = "https://gmeet.at/" + meetName,
+                    Description = $"https://{Domain}/{meetName}",
                     Start = new CalendarEvent.DateTimeRequest
                     {
                         DateTime = DateTime.UtcNow
@@ -148,6 +149,7 @@ namespace GMeet.Helpers
                 // let's update it so that active events keep on moving forward in the calendar. It's really not needed, but I like it better
                 var patchRequet = new CalendarEvent
                 {
+                    Description = $"https://{Domain}/{meetName}",
                     Start = new CalendarEvent.DateTimeRequest
                     {
                         DateTime = DateTime.UtcNow
@@ -207,6 +209,7 @@ namespace GMeet.Helpers
             ClientId = configuration.GetValue<string>("GOOGLE_CLIENT_ID");
             ClientSecret = configuration.GetValue<string>("GOOGLE_CLIENT_SECRET");
             CalendarId = configuration.GetValue<string>("GOOGLE_CALENDAR_ID");
+            Domain = configuration.GetValue<string>("GMEET_DOMAIN");
         }
     }
 }
