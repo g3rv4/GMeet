@@ -1,11 +1,16 @@
 ﻿using System;
-using System.Text;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using GMeet.Helpers;
 using GMeet.Models;
+using GMeet.Models.Slack;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
 
 namespace GMeet.Controllers
 {
@@ -13,11 +18,15 @@ namespace GMeet.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly IGoogleMeetHelper _calendarHelper;
+        private readonly ISlackHelper _slackHelper;
+        private readonly string _domain;
 
-        public HomeController(ILogger<HomeController> logger, IGoogleMeetHelper calendarHelper)
+        public HomeController(ILogger<HomeController> logger, IGoogleMeetHelper calendarHelper, ISlackHelper slackHelper, IConfiguration configuration)
         {
             _logger = logger;
             _calendarHelper = calendarHelper;
+            _slackHelper = slackHelper;
+            _domain = configuration.GetValue<string>("GMEET_DOMAIN");
         }
 
         [Route("favicon.ico")]
@@ -37,6 +46,52 @@ namespace GMeet.Controllers
         {
             Response.Cookies.Append("authuser", authuser, new Microsoft.AspNetCore.Http.CookieOptions() { Expires = DateTime.UtcNow.AddYears(10) });
             return Content("Done! From now on, you will be redirected using authuser=" + authuser);
+        }
+
+        [AcceptVerbs("GET", "POST")]
+        [Route("slack-command")]
+        public async Task<IActionResult> SlackCommand(string user_name, string user_id, string text)
+        {
+            var matches = Regex.Matches(text, @"<@([^\|>]+)[\|>]");
+            string slug;
+
+            string slugify(string str)
+            {
+                var res = Regex.Replace(str.ToLower(), "[^a-z0-9]", "-");
+                res = Regex.Replace(res, "-+", "-");
+                res.Trim('-');
+                return res;
+            }
+
+            if (matches.Count > 0)
+            {
+                // there are mentions. Fun!
+                var userIds = new HashSet<string> { user_id };
+                foreach (Match match in matches)
+                {
+                    userIds.Add(match.Groups[1].Value);
+                }
+
+                var usernames = new List<string>();
+                foreach (var userId in userIds)
+                {
+                    usernames.Add(await _slackHelper.GetUsernameFromIdAsync(userId));
+                }
+
+                var sortedUsernames = usernames.Select(slugify).OrderBy(u => u);
+                slug = string.Join("-", sortedUsernames);
+            }
+            else
+            {
+                slug = slugify(text);
+            }
+
+            var response = new CommandResponse
+            {
+                ResponseType = "in_channel",
+                Text = $"hangout: {_domain}/{slug}"
+            };
+            return Content(Jil.JSON.Serialize(response, Jil.Options.CamelCase), new MediaTypeHeaderValue("application/json"));
         }
 
         [Route("{*meetingName}", Order = 1000)]

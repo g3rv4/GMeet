@@ -21,6 +21,7 @@ namespace GMeet
         {
             services.AddControllersWithViews();
             services.AddSingleton(typeof(IGoogleMeetHelper), typeof(GoogleMeetHelper));
+            services.AddSingleton(typeof(ISlackHelper), typeof(SlackHelper));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
