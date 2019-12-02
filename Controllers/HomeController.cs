@@ -20,6 +20,7 @@ namespace GMeet.Controllers
         private readonly IGoogleMeetHelper _calendarHelper;
         private readonly ISlackHelper _slackHelper;
         private readonly string _domain;
+        private readonly string _slackToken;
 
         public HomeController(ILogger<HomeController> logger, IGoogleMeetHelper calendarHelper, ISlackHelper slackHelper, IConfiguration configuration)
         {
@@ -27,6 +28,7 @@ namespace GMeet.Controllers
             _calendarHelper = calendarHelper;
             _slackHelper = slackHelper;
             _domain = configuration.GetValue<string>("GMEET_DOMAIN");
+            _slackToken = configuration.GetValue<string>("SLACK_VERIFICATION_TOKEN");
         }
 
         [Route("favicon.ico")]
@@ -48,10 +50,15 @@ namespace GMeet.Controllers
             return Content("Done! From now on, you will be redirected using authuser=" + authuser);
         }
 
-        [AcceptVerbs("GET", "POST")]
+        [AcceptVerbs("POST")]
         [Route("slack-command")]
-        public async Task<IActionResult> SlackCommand(string user_name, string user_id, string text)
+        public async Task<IActionResult> SlackCommand(string user_name, string user_id, string text, string token)
         {
+            if (token != _slackToken)
+            {
+                return BadRequest();
+            }
+
             var matches = Regex.Matches(text, @"<@([^\|>]+)[\|>]");
             string slug;
 
