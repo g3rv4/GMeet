@@ -59,6 +59,12 @@ namespace GMeet.Controllers
                 return BadRequest();
             }
 
+            // Allow empty text to generate a random slug based on a guid
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                text = Guid.NewGuid().ToString().Substring(0, 8);
+            }
+
             var matches = Regex.Matches(text, @"<@([^\|>]+)[\|>]");
             string slug;
 
