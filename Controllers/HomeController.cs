@@ -59,10 +59,10 @@ namespace GMeet.Controllers
                 return BadRequest();
             }
 
-            // Allow empty text to generate a random slug based on a guid
+            // Allow empty text to generate a slug based on the caller's username
             if (string.IsNullOrWhiteSpace(text))
             {
-                text = Guid.NewGuid().ToString().Substring(0, 8);
+                text = await _slackHelper.GetUsernameFromIdAsync(user_id);
             }
 
             var matches = Regex.Matches(text, @"<@([^\|>]+)[\|>]");
