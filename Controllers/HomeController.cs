@@ -51,6 +51,8 @@ namespace GMeet.Controllers
         }
 
         private static Regex _usernamesRegex = new Regex(@"<@([^\|>]+)[\|>]", RegexOptions.Compiled);
+        private static Regex _invalidChars = new Regex(@"[^a-z0-9-_]", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static Regex _links = new Regex(@"<http[^\|]+\|([^>]+)>", RegexOptions.Compiled);
 
         [AcceptVerbs("POST")]
         [Route("slack-command")]
@@ -67,14 +69,17 @@ namespace GMeet.Controllers
                 text = await _slackHelper.GetUsernameFromIdAsync(user_id);
             }
 
+            // fix links
+            text = _links.Replace(text, "$1");
+
             var matches = _usernamesRegex.Matches(text);
             string slug;
 
             string slugify(string str)
             {
-                var res = Regex.Replace(str.ToLower(), "[^a-z0-9]", "-");
+                var res = _invalidChars.Replace(str.ToLower(), "-");
                 res = Regex.Replace(res, "-+", "-");
-                res.Trim('-');
+                res = res.Trim('-');
                 return res;
             }
 
@@ -108,8 +113,6 @@ namespace GMeet.Controllers
             };
             return Content(Jil.JSON.Serialize(response, Jil.Options.CamelCase), new MediaTypeHeaderValue("application/json"));
         }
-
-        private static Regex _invalidChars = new Regex(@"[^a-z0-9-_]", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         [Route("{*meetingName}", Order = 1000)]
         public async Task<IActionResult> GoToMeet(string meetingName)
