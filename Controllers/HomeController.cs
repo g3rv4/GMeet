@@ -50,6 +50,8 @@ namespace GMeet.Controllers
             return Content("Done! From now on, you will be redirected using authuser=" + authuser);
         }
 
+        private static Regex _usernamesRegex = new Regex(@"<@([^\|>]+)[\|>]", RegexOptions.Compiled);
+
         [AcceptVerbs("POST")]
         [Route("slack-command")]
         public async Task<IActionResult> SlackCommand(string user_name, string user_id, string text, string token)
@@ -65,7 +67,7 @@ namespace GMeet.Controllers
                 text = await _slackHelper.GetUsernameFromIdAsync(user_id);
             }
 
-            var matches = Regex.Matches(text, @"<@([^\|>]+)[\|>]");
+            var matches = _usernamesRegex.Matches(text);
             string slug;
 
             string slugify(string str)
@@ -107,12 +109,19 @@ namespace GMeet.Controllers
             return Content(Jil.JSON.Serialize(response, Jil.Options.CamelCase), new MediaTypeHeaderValue("application/json"));
         }
 
+        private static Regex _invalidChars = new Regex(@"[^a-z0-9-_]", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         [Route("{*meetingName}", Order = 1000)]
         public async Task<IActionResult> GoToMeet(string meetingName)
         {
             if (string.IsNullOrWhiteSpace(meetingName))
             {
                 return View("Index");
+            }
+
+            if (_invalidChars.IsMatch(meetingName))
+            {
+                return NotFound("Invalid name");
             }
 
             var meetResult = await _calendarHelper.GetMeetLinkAsync(meetingName);

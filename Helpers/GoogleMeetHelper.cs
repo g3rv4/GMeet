@@ -87,9 +87,9 @@ namespace GMeet.Helpers
         {
             var bytes = Encoding.ASCII.GetBytes(meetName);
             var encoded = Base32HexEncoding.ToString(bytes).Replace("=", "").ToLower();
-            if (encoded.Length > 1024)
+            if (encoded.Length < 5 || encoded.Length > 1024)
             {
-                return encoded.Substring(0, 1024);
+                return null;
             }
             return encoded;
         }
@@ -97,7 +97,7 @@ namespace GMeet.Helpers
         private async Task<GetMeetLinkResponse> GetMeetUrlFromMeetName(string meetName)
         {
             var eventId = GetEventId(meetName);
-            if (eventId.Length < 5)
+            if (eventId == null)
             {
                 return new GetMeetLinkResponse(GetMeetLinkResponse.Status.InvalidName);
             }
