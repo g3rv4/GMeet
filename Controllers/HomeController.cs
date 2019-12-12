@@ -117,6 +117,15 @@ namespace GMeet.Controllers
         [Route("{*meetingName}", Order = 1000)]
         public async Task<IActionResult> GoToMeet(string meetingName)
         {
+            if (Request.Headers.ContainsKey("User-Agent"))
+            {
+                var ua = Request.Headers["User-Agent"].FirstOrDefault();
+                if (ua.Contains("api.slack.com"))
+                {
+                    return Content("We don't like robots");
+                }
+            }
+
             if (string.IsNullOrWhiteSpace(meetingName))
             {
                 return View("Index");
