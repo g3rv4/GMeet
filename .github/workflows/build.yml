@@ -1,0 +1,50 @@
+name: build
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: Azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - uses: Azure/get-keyvault-secrets@v1.0
+      with:
+        keyvault: "ActionsBuild"
+        secrets: 'OctopusServerUrl, OctopusApiKey'
+      id: azureSecrets
+
+    - name: Set variables
+      shell: pwsh
+      run: |
+        $basePath = Pwd
+        $csProjPath = Join-Path $basePath GMeet.csproj
+
+        [xml]$xmlDoc = Get-Content $csProjPath
+        $versionElement = $xmlDoc['Project']['PropertyGroup']['Version']
+        $version = [version]$versionElement.InnerText
+        $newVersion = "$($version.Major).$($version.Minor).$($env:GITHUB_RUN_NUMBER)"
+        $newVersionWithBuild = "$($newVersion)+$($env:GITHUB_SHA.SubString(0, 7))"
+        $versionElement.InnerText = $newVersionWithBuild
+        $xmlDoc.Save($csProjPath)
+
+        Write-Host "::set-env name=BASE_PATH::$basePath"
+        Write-Host "::set-env name=VERSION::$newVersion"
+        Write-Host "::set-env name=VERSION_WITH_BUILD::$newVersionWithBuild"
+    - name: Build site
+      shell: pwsh
+      run: |
+        $pwd = pwd
+        $uid = sh -c 'id -u'
+        $gid = sh -c 'id -g'
+
+        docker run --rm -v "$($pwd):/var/src" mcr.microsoft.com/dotnet/core/sdk:3.1-alpine3.11 ash -c "dotnet pack -c Release /var/src/GMeet.csproj -o /var/src/out && chown -R $($uid):$($gid) /var/src"
+    - name: Push it to GitHub
+      run: curl -X PUT -u "$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}" -F package=@$BASE_PATH/out/gmeet.$VERSION.nupkg https://nuget.pkg.github.com/g3rv4/
+    - name: Create and deploy an Octopus release
+      run: |
+        dotnet tool install --global Octopus.DotNet.Cli
+        dotnet-octo create-release --project gmeet --releaseNumber $VERSION_WITH_BUILD --deployto Dev --server "${{ steps.azureSecrets.outputs.OctopusServerUrl }}" --apiKey "${{ steps.azureSecrets.outputs.OctopusApiKey }}" --progress
