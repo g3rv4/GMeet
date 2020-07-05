@@ -5,9 +5,6 @@
     <PackageId>gmeet</PackageId>
     <Version>1.0.0</Version>
     <Authors>Gervasio Marchand Cassataro</Authors>
-    <RepositoryUrl>https://github.com/g3rv4/GMeet.git</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <IsPackable>true</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
