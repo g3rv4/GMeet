@@ -26,7 +26,7 @@ if (Test-Path $buildPath -PathType Container) {
 $uid = sh -c 'id -u'
 $gid = sh -c 'id -g'
 
-docker run --rm -v "$($basePath):/var/src" mcr.microsoft.com/dotnet/core/sdk:3.1.301-alpine3.12 ash -c "dotnet publish -c Release /var/src/GMeet.csproj -o /var/src/bin/build && chown -R $($uid):$($gid) /var/src"
+docker run --rm -v "$($basePath):/var/src" mcr.microsoft.com/dotnet/core/sdk:3.1.302-alpine3.12 ash -c "dotnet publish -c Release /var/src/GMeet.csproj -o /var/src/bin/build && chown -R $($uid):$($gid) /var/src"
 
 $nuspecPath = Join-Path $buildPath gmeet.nuspec
 $nupkgPath = Join-Path $buildPath "gmeet.$($newVersion).nupkg"
