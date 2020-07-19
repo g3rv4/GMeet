@@ -38,5 +38,6 @@ $xmlDoc.Save($nuspecPath)
 
 Compress-Archive -Path "$($buildPath)/*" -DestinationPath $nupkgPath
 
+Write-Host "Compressed!"
 Write-Host "::set-env name=VERSION::$newVersion"
 Write-Host "::set-env name=PKG_PATH::$nupkgPath"
