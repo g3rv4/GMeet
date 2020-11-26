@@ -11,7 +11,7 @@ jobs:
     - uses: Azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
-    - uses: Azure/get-keyvault-secrets@v1.0
+    - uses: Azure/get-keyvault-secrets@v1.1
       with:
         keyvault: "ActionsBuild"
         secrets: 'OctopusServerUrl, OctopusApiKey'
@@ -25,4 +25,4 @@ jobs:
     - name: Create and deploy an Octopus release
       run: |
         dotnet tool install --global Octopus.DotNet.Cli
-        dotnet-octo create-release --project gmeet --releaseNumber $VERSION --package gmeet:$VERSION --deployto Dev --server "${{ steps.azureSecrets.outputs.OctopusServerUrl }}" --apiKey "${{ steps.azureSecrets.outputs.OctopusApiKey }}" --progress
+        dotnet-octo create-release --project gmeet --releaseNumber $VERSION --package gmeet:$VERSION_WITHOUT_HASH --deployto Dev --server "${{ steps.azureSecrets.outputs.OctopusServerUrl }}" --apiKey "${{ steps.azureSecrets.outputs.OctopusApiKey }}" --progress
