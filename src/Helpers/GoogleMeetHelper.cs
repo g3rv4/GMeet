@@ -16,6 +16,8 @@ namespace GMeet.Helpers
     public interface IGoogleMeetHelper
     {
         Task<GetMeetLinkResponse> GetMeetLinkAsync(string meetName);
+
+        void ClearCache();
     }
 
     public class GoogleMeetHelper : IGoogleMeetHelper
@@ -202,6 +204,8 @@ namespace GMeet.Helpers
 
             return response;
         }
+
+        public void ClearCache() => MeetLinks.Clear();
 
         public GoogleMeetHelper(IConfiguration configuration)
         {

@@ -54,6 +54,13 @@ namespace GMeet.Controllers
         private static Regex _invalidChars = new Regex(@"[^a-z0-9-_]", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static Regex _links = new Regex(@"<http[^\|]+\|([^>]+)>", RegexOptions.Compiled);
 
+        [Route("clear-cache")]
+        public IActionResult ClearCache()
+        {
+            _calendarHelper.ClearCache();
+            return Content("ok");
+        }
+
         [AcceptVerbs("POST")]
         [Route("slack-command")]
         public async Task<IActionResult> SlackCommand(string user_name, string user_id, string text, string token)
