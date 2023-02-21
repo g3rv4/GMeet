@@ -1,28 +1,30 @@
-name: build
+name: Create Image
 on:
   push:
-    branches: [ master ]
+    branches:
+      - main
 
 jobs:
-  build:
+  create-docker-image:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: Azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-    - uses: Azure/get-keyvault-secrets@v1.1
-      with:
-        keyvault: "ActionsBuild"
-        secrets: 'OctopusServerUrl, OctopusApiKey'
-      id: azureSecrets
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push the Docker image
+        shell: pwsh
+        run: |
+          Push-Location src
+          $version = (nbgv get-version -f json | ConvertFrom-Json).SimpleVersion
+          $version = "v$version"
+          Pop-Location
 
-    - name: Build project
-      shell: pwsh
-      run: ./build.ps1 $env:GITHUB_RUN_NUMBER $env:GITHUB_SHA
-    - name: Push it to GitHub
-      run: curl -X PUT -u "$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}" -F package=@$PKG_PATH https://nuget.pkg.github.com/g3rv4/
-    - name: Create and deploy an Octopus release
-      run: |
-        dotnet tool install --global Octopus.DotNet.Cli
-        dotnet-octo create-release --project gmeet --releaseNumber $VERSION --package gmeet:$VERSION_WITHOUT_HASH --deployto Dev --server "${{ steps.azureSecrets.outputs.OctopusServerUrl }}" --apiKey "${{ steps.azureSecrets.outputs.OctopusApiKey }}" --progress
+          docker build . -t ghcr.io/g3rv4/gmeet:latest
+          docker tag ghcr.io/g3rv4/gmeet:latest ghcr.io/g3rv4/gmeet:$version
+          docker push ghcr.io/g3rv4/gmeet:latest
+          docker push ghcr.io/g3rv4/gmeet:$version
