@@ -1,32 +1,54 @@
 name: Create Image
 on:
+  workflow_dispatch:
+  pull_request:
   push:
     branches:
       - main
 
 jobs:
-  create-docker-image:
+  build_docker:
+    name: Docker build and push
     runs-on: ubuntu-latest
+    outputs:
+      image_tag_sha: ${{ env.IMAGE_BASE_NAME }}:${{ steps.docker-image-metadata.outputs.version }}
+      image_tag_latest: ${{ env.IMAGE_BASE_NAME }}:latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # get entire git tree, required for nerdbank gitversioning
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push the Docker image
-        shell: pwsh
-        run: |
-          Push-Location src
-          $version = (nbgv get-version -f json | ConvertFrom-Json).SimpleVersion
-          $version = "v$version"
-          Pop-Location
+          fetch-depth: 0
 
-          docker build . -t ghcr.io/g3rv4/gmeet:latest
-          docker tag ghcr.io/g3rv4/gmeet:latest ghcr.io/g3rv4/gmeet:$version
-          docker push ghcr.io/g3rv4/gmeet:latest
-          docker push ghcr.io/g3rv4/gmeet:$version
+      - name: Setup up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Cloudsmith Docker Registry - dev
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ github.ref_name == 'main' && vars.CLOUDSMITH_DOCKER_REGISTRY_PROD || vars.CLOUDSMITH_DOCKER_REGISTRY_DEV }}
+          username: ${{ secrets.CLOUDSMITH_API_ACCOUNT }}
+          password: ${{ secrets.CLOUDSMITH_API_KEY }}
+
+      - name: Login to Cloudsmith Docker Registry - prod
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ github.ref_name == 'main' && vars.CLOUDSMITH_DOCKER_REGISTRY_PROD || vars.CLOUDSMITH_DOCKER_REGISTRY_DEV }}
+          username: ${{ secrets.CLOUDSMITH_API_ACCOUNT }}
+          password: ${{ secrets.CLOUDSMITH_API_KEY }}
+
+      - name: Docker Image Metadata
+        id: docker-image-metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_BASE_NAME }}
+          tags: type=sha
+          flavor: latest=true
+
+      - name: Build container
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          context: .
+          file: ./Dockerfile
+          tags: ${{ steps.docker-image-metadata.outputs.tags }}
+          labels: ${{ steps.docker-image-metadata.outputs.labels }}
+          provenance: false
